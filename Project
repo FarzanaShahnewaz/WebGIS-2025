@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NC Emergency Hospital Access - Viral Outbreak Monitoring</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.2.1/ol.css">
+    <script src="https://cdn.jsdelivr.net/npm/ol@v10.2.1/dist/ol.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        #map {
+            flex: 1;
+            position: relative;
+        }
+        
+        .sidebar {
+            width: 320px;
+            background: #f8f9fa;
+            border-left: 1px solid #dee2e6;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .legend h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #2a5298;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            border: 2px solid #666;
+        }
+        
+        .legend-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        
+        .info-panel {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .info-panel h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #2a5298;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-label {
+            color: #666;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .risk-high { color: #dc3545; }
+        .risk-medium { color: #ffc107; }
+        .risk-low { color: #28a745; }
+        
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .controls h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #2a5298;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .control-group select,
+        .control-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        .ol-popup {
+            position: absolute;
+            background-color: white;
+            box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            bottom: 12px;
+            left: -50px;
+            min-width: 280px;
+        }
+        
+        .ol-popup:after, .ol-popup:before {
+            top: 100%;
+            border: solid transparent;
+            content: " ";
+            height: 0;
+            width: 0;
+            position: absolute;
+            pointer-events: none;
+        }
+        
+        .ol-popup:after {
+            border-top-color: white;
+            border-width: 10px;
+            left: 48px;
+            margin-left: -10px;
+        }
+        
+        .ol-popup:before {
+            border-top-color: #ccc;
+            border-width: 11px;
+            left: 48px;
+            margin-left: -11px;
+        }
+        
+        .ol-popup-closer {
+            text-decoration: none;
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 20px;
+            color: #999;
+        }
+        
+        .ol-popup-closer:hover {
+            color: #333;
+        }
+        
+        .popup-content h4 {
+            margin: 0 0 10px 0;
+            color: #2a5298;
+            font-size: 16px;
+        }
+        
+        .popup-content p {
+            margin: 5px 0;
+            font-size: 13px;
+        }
+        
+        .popup-content strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🏥 NC Emergency Hospital Access During Viral Outbreaks</h1>
+        <p>Interactive Web GIS Map | North Carolina Department of Health and Human Services Data</p>
+    </header>
+    
+    <div class="container">
+        <div id="map"></div>
+        
+        <div class="sidebar">
+            <div class="legend">
+                <h3>Map Legend</h3>
+                <div class="legend-item">
+                    <div class="legend-icon">🏥</div>
+                    <span>Emergency Hospital</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: rgba(220, 53, 69, 0.6);"></div>
+                    <span>High Risk (>10% positivity)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: rgba(255, 193, 7, 0.6);"></div>
+                    <span>Medium Risk (5-10%)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: rgba(40, 167, 69, 0.6);"></div>
+                    <span>Low Risk (<5%)</span>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <h3>Statewide Metrics</h3>
+                <div class="metric">
+                    <span class="metric-label">Total Hospitals:</span>
+                    <span class="metric-value">42</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Avg COVID Positivity:</span>
+                    <span class="metric-value risk-medium">7.2%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Weekly Admissions:</span>
+                    <span class="metric-value">1,847</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">High Risk Counties:</span>
+                    <span class="metric-value risk-high">12</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <h3>Map Controls</h3>
+                <div class="control-group">
+                    <label>Virus Type:</label>
+                    <select id="virusSelect">
+                        <option value="covid">COVID-19</option>
+                        <option value="flu">Influenza</option>
+                        <option value="rsv">RSV</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Data Week:</label>
+                    <input type="week" id="weekSelect" value="2024-W48">
+                </div>
+                <div class="control-group">
+                    <label>Search Location:</label>
+                    <input type="text" id="searchBox" placeholder="Enter city or county...">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="popup" class="ol-popup">
+        <a href="#" id="popup-closer" class="ol-popup-closer">×</a>
+        <div id="popup-content" class="popup-content"></div>
+    </div>
+
+    <script>
+        // Sample hospital data for North Carolina
+        const hospitals = [
+            { name: "Duke University Hospital", county: "Durham", coords: [-78.9382, 36.0097], admissions: 245, capacity: 1048, emergency: true },
+            { name: "UNC Medical Center", county: "Orange", coords: [-79.0558, 35.9040], admissions: 312, capacity: 952, emergency: true },
+            { name: "Wake Med", county: "Wake", coords: [-78.6382, 35.7796], admissions: 198, capacity: 870, emergency: true },
+            { name: "Atrium Health CMC", county: "Mecklenburg", coords: [-80.8431, 35.2271], admissions: 278, capacity: 1200, emergency: true },
+            { name: "Vidant Medical Center", county: "Pitt", coords: [-77.3664, 35.6127], admissions: 156, capacity: 678, emergency: true },
+            { name: "Mission Hospital", county: "Buncombe", coords: [-82.5515, 35.5951], admissions: 189, capacity: 815, emergency: true },
+            { name: "Cone Health", county: "Guilford", coords: [-79.7920, 36.0726], admissions: 167, capacity: 712, emergency: true },
+            { name: "FirstHealth Moore Regional", county: "Moore", coords: [-79.4628, 35.1771], admissions: 98, capacity: 425, emergency: true },
+            { name: "WakeMed Cary", county: "Wake", coords: [-78.7811, 35.7915], admissions: 134, capacity: 556, emergency: true },
+            { name: "UNC Rex Hospital", county: "Wake", coords: [-78.6469, 35.8176], admissions: 201, capacity: 665, emergency: true }
+        ];
+        
+        // Sample county risk data
+        const countyRisk = {
+            "Durham": { risk: "medium", positivity: 8.3, admissions: 245 },
+            "Orange": { risk: "high", positivity: 11.2, admissions: 312 },
+            "Wake": { risk: "medium", positivity: 7.1, admissions: 533 },
+            "Mecklenburg": { risk: "medium", positivity: 6.9, admissions: 278 },
+            "Pitt": { risk: "low", positivity: 4.2, admissions: 156 },
+            "Buncombe": { risk: "medium", positivity: 7.8, admissions: 189 },
+            "Guilford": { risk: "low", positivity: 4.8, admissions: 167 },
+            "Moore": { risk: "low", positivity: 3.1, admissions: 98 },
+            "New Hanover": { risk: "high", positivity: 12.1, admissions: 223 },
+            "Forsyth": { risk: "medium", positivity: 8.9, admissions: 198 }
+        };
+
+        // Initialize popup
+        const container = document.getElementById('popup');
+        const content = document.getElementById('popup-content');
+        const closer = document.getElementById('popup-closer');
+
+        const overlay = new ol.Overlay({
+            element: container,
+            autoPan: true,
+            autoPanAnimation: {
+                duration: 250
+            }
+        });
+
+        closer.onclick = function() {
+            overlay.setPosition(undefined);
+            closer.blur();
+            return false;
+        };
+
+        // Create hospital features
+        const hospitalFeatures = hospitals.map(hospital => {
+            const feature = new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat(hospital.coords)),
+                name: hospital.name,
+                county: hospital.county,
+                admissions: hospital.admissions,
+                capacity: hospital.capacity,
+                emergency: hospital.emergency
+            });
+            return feature;
+        });
+
+        // Create hospital layer
+        const hospitalLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: hospitalFeatures
+            }),
+            style: new ol.style.Style({
+                image: new ol.style.Icon({
+                    src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="%232a5298" stroke="white" stroke-width="2"/><text x="16" y="22" font-size="18" text-anchor="middle" fill="white">🏥</text></svg>',
+                    scale: 1
+                })
+            })
+        });
+
+        // NC counties boundary polygons (simplified)
+        const ncCounties = [
+            { name: "Wake", coords: [[-78.9, 35.6], [-78.3, 35.6], [-78.3, 36.1], [-78.9, 36.1], [-78.9, 35.6]] },
+            { name: "Mecklenburg", coords: [[-81.1, 35.0], [-80.5, 35.0], [-80.5, 35.5], [-81.1, 35.5], [-81.1, 35.0]] },
+            { name: "Durham", coords: [[-79.1, 35.8], [-78.7, 35.8], [-78.7, 36.2], [-79.1, 36.2], [-79.1, 35.8]] },
+            { name: "Orange", coords: [[-79.3, 35.8], [-78.9, 35.8], [-78.9, 36.2], [-79.3, 36.2], [-79.3, 35.8]] },
+            { name: "Guilford", coords: [[-80.1, 35.9], [-79.5, 35.9], [-79.5, 36.3], [-80.1, 36.3], [-80.1, 35.9]] }
+        ];
+
+        function getRiskColor(countyName) {
+            const risk = countyRisk[countyName];
+            if (!risk) return 'rgba(200, 200, 200, 0.3)';
+            
+            if (risk.risk === 'high') return 'rgba(220, 53, 69, 0.6)';
+            if (risk.risk === 'medium') return 'rgba(255, 193, 7, 0.6)';
+            return 'rgba(40, 167, 69, 0.6)';
+        }
+
+        // Create county features
+        const countyFeatures = ncCounties.map(county => {
+            const coords = county.coords.map(coord => ol.proj.fromLonLat(coord));
+            const feature = new ol.Feature({
+                geometry: new ol.geom.Polygon([coords]),
+                name: county.name,
+                riskData: countyRisk[county.name]
+            });
+            return feature;
+        });
+
+        const countyLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: countyFeatures
+            }),
+            style: function(feature) {
+                const countyName = feature.get('name');
+                return new ol.style.Style({
+                    fill: new ol.style.Fill({
+                        color: getRiskColor(countyName)
+                    }),
+                    stroke: new ol.style.Stroke({
+                        color: '#333',
+                        width: 1
+                    })
+                });
+            }
+        });
+
+        // Initialize map
+        const map = new ol.Map({
+            target: 'map',
+            overlays: [overlay],
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                }),
+                countyLayer,
+                hospitalLayer
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([-79.0193, 35.7596]), // Center of NC
+                zoom: 7
+            })
+        });
+
+        // Click handler for features
+        map.on('click', function(evt) {
+            const feature = map.forEachFeatureAtPixel(evt.pixel, function(feature) {
+                return feature;
+            });
+
+            if (feature) {
+                const coordinates = evt.coordinate;
+                const name = feature.get('name');
+                
+                if (feature.get('emergency')) {
+                    // Hospital popup
+                    const county = feature.get('county');
+                    const admissions = feature.get('admissions');
+                    const capacity = feature.get('capacity');
+                    const riskData = countyRisk[county] || {};
+                    
+                    content.innerHTML = `
+                        <h4>${name}</h4>
+                        <p><strong>County:</strong> ${county}</p>
+                        <p><strong>Emergency Services:</strong> Available ✓</p>
+                        <p><strong>Current Admissions:</strong> ${admissions}/${capacity}</p>
+                        <p><strong>County Positivity:</strong> <span class="risk-${riskData.risk}">${riskData.positivity}%</span></p>
+                        <p><strong>Weekly Admissions:</strong> ${riskData.admissions}</p>
+                    `;
+                } else {
+                    // County popup
+                    const riskData = feature.get('riskData') || {};
+                    content.innerHTML = `
+                        <h4>${name} County</h4>
+                        <p><strong>Risk Level:</strong> <span class="risk-${riskData.risk}">${riskData.risk ? riskData.risk.toUpperCase() : 'N/A'}</span></p>
+                        <p><strong>Test Positivity:</strong> ${riskData.positivity || 'N/A'}%</p>
+                        <p><strong>Weekly Admissions:</strong> ${riskData.admissions || 'N/A'}</p>
+                    `;
+                }
+                
+                overlay.setPosition(coordinates);
+            }
+        });
+
+        // Change cursor on hover
+        map.on('pointermove', function(e) {
+            const pixel = map.getEventPixel(e.originalEvent);
+            const hit = map.hasFeatureAtPixel(pixel);
+            map.getTarget().style.cursor = hit ? 'pointer' : '';
+        });
+
+        // Search functionality
+        document.getElementById('searchBox').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const searchTerm = this.value.toLowerCase();
+                const hospital = hospitals.find(h => 
+                    h.name.toLowerCase().includes(searchTerm) || 
+                    h.county.toLowerCase().includes(searchTerm)
+                );
+                
+                if (hospital) {
+                    const coords = ol.proj.fromLonLat(hospital.coords);
+                    map.getView().animate({
+                        center: coords,
+                        zoom: 10,
+                        duration: 1000
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
