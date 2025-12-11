@@ -126,31 +126,31 @@
     </div>
 
     <script>
-        // Create OSM basemap layer
+        // Create base layer group - only one base layer visible at a time
         const osmLayer = new ol.layer.Tile({
             source: new ol.source.OSM(),
             visible: true
         });
         
-        // Create ESRI Imagery basemap layer
         const esriLayer = new ol.layer.Tile({
             source: new ol.source.XYZ({
                 url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                attributions: 'Tiles © Esri'
+                attributions: 'Tiles © Esri',
+                maxZoom: 19
             }),
             visible: false
         });
         
-        // Create WMS layer
+        // Create WMS layer with correct parameters
         const wmsLayer = new ol.layer.Tile({
             source: new ol.source.TileWMS({
                 url: 'https://ahocevar.com/geoserver/wms',
                 params: {
                     'LAYERS': 'topp:states',
-                    'TILED': true,
-                    'VERSION': '1.1.1'
+                    'TILED': true
                 },
-                serverType: 'geoserver'
+                serverType: 'geoserver',
+                crossOrigin: 'anonymous'
             }),
             visible: true,
             opacity: 0.7
@@ -161,27 +161,26 @@
             target: 'map',
             layers: [osmLayer, esriLayer, wmsLayer],
             view: new ol.View({
-                center: ol.proj.fromLonLat([-98.5795, 39.8283]), // Center of continental US
+                center: ol.proj.fromLonLat([-98.5795, 39.8283]),
                 zoom: 5
             })
         });
         
-        // Basemap switcher event listeners
+        // Basemap switcher - ensure only one basemap is visible
         document.querySelectorAll('input[name="basemap"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
-                if (e.target.value === 'osm') {
-                    osmLayer.setVisible(true);
-                    esriLayer.setVisible(false);
-                } else if (e.target.value === 'esri') {
-                    osmLayer.setVisible(false);
-                    esriLayer.setVisible(true);
-                }
+                const value = e.target.value;
+                osmLayer.setVisible(value === 'osm');
+                esriLayer.setVisible(value === 'esri');
+                // Force map to re-render
+                map.render();
             });
         });
         
         // WMS layer toggle
         document.getElementById('wms').addEventListener('change', (e) => {
             wmsLayer.setVisible(e.target.checked);
+            map.render();
         });
     </script>
 </body>
