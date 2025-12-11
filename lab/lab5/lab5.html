@@ -1,72 +1,188 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>OpenLayers Basemap Switcher with WMS</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css" />
-<style>
-body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-#map { width: 100%; height: 90vh; }
-#controls { padding: 10px; background: #f4f4f4; }
-.layer-option { margin-right: 20px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenLayers Map Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/8.2.0/ol.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/8.2.0/dist/ol.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #map {
+            flex: 1;
+            width: 100%;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 220px;
+            z-index: 1000;
+        }
+        
+        .control-section {
+            margin-bottom: 20px;
+        }
+        
+        .control-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .control-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .radio-group, .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .radio-option, .checkbox-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .radio-option:hover, .checkbox-option:hover {
+            background-color: #f5f5f5;
+        }
+        
+        input[type="radio"], input[type="checkbox"] {
+            margin-right: 10px;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+        
+        label {
+            cursor: pointer;
+            font-size: 14px;
+            color: #555;
+            user-select: none;
+        }
+        
+        .divider {
+            height: 1px;
+            background: #e0e0e0;
+            margin: 16px 0;
+        }
+    </style>
 </head>
 <body>
-<div id="controls">
-<strong>Basemaps:</strong>
-<label class="layer-option">
-<input type="radio" name="basemap" value="osm" checked /> OSM
-</label>
-<label class="layer-option">
-<input type="radio" name="basemap" value="esri" /> ESRI Imagery
-</label>
+    <div id="map"></div>
+    
+    <div class="controls">
+        <div class="control-section">
+            <h3>Basemap</h3>
+            <div class="radio-group">
+                <div class="radio-option">
+                    <input type="radio" id="osm" name="basemap" value="osm" checked>
+                    <label for="osm">OpenStreetMap</label>
+                </div>
+                <div class="radio-option">
+                    <input type="radio" id="esri" name="basemap" value="esri">
+                    <label for="esri">ESRI Imagery</label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <div class="control-section">
+            <h3>Layers</h3>
+            <div class="checkbox-group">
+                <div class="checkbox-option">
+                    <input type="checkbox" id="wms" checked>
+                    <label for="wms">US States (WMS)</label>
+                </div>
+            </div>
+        </div>
+    </div>
 
-
-<label style="margin-left: 30px;">
-<input type="checkbox" id="wmsToggle" checked /> WMS Layer (topp:states)
-</label>
-</div>
-
-
-<div id="map"></div>
-
-
-<script src="https://cdn.jsdelivr.net/npm/ol@latest/ol.js"> // Error handling for basemaps
-osmLayer.getSource().on('tileloaderror', () => {
-console.warn("Please verify the OSM and ESRI World Imagery as they disappear.");
-});
-
-
-esriLayer.getSource().on('tileloaderror', () => {
-console.warn("Please verify the OSM and ESRI World Imagery as they disappear.");
-});
-
-
-// Error handling for WMS layer
-wmsLayer.getSource().on('tileloaderror', () => {
-console.warn("Please verify the WMS as it does not show.");
-});
-</script>
-<script>
-// Base Layers
-const osmLayer = new ol.layer.Tile({
-source: new ol.source.OSM({ crossOrigin: 'anonymous' })(),
-visible: true
-});
-
-
-const esriLayer = new ol.layer.Tile({
-source: new ol.source.XYZ({ crossOrigin: 'anonymous',({
-url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-}),
-visible: false
-});
-
-
-// WMS Layer
-const wmsLayer = new ol.layer.Tile({
-source: new ol.source.TileWMS({ crossOrigin: 'anonymous',({
-url: "https://ahocevar.com/geoserver/wms",
+    <script>
+        // Create OSM basemap layer
+        const osmLayer = new ol.layer.Tile({
+            source: new ol.source.OSM(),
+            visible: true
+        });
+        
+        // Create ESRI Imagery basemap layer
+        const esriLayer = new ol.layer.Tile({
+            source: new ol.source.XYZ({
+                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                attributions: 'Tiles © Esri'
+            }),
+            visible: false
+        });
+        
+        // Create WMS layer
+        const wmsLayer = new ol.layer.Tile({
+            source: new ol.source.TileWMS({
+                url: 'https://ahocevar.com/geoserver/wms',
+                params: {
+                    'LAYERS': 'topp:states',
+                    'TILED': true,
+                    'VERSION': '1.1.1'
+                },
+                serverType: 'geoserver'
+            }),
+            visible: true,
+            opacity: 0.7
+        });
+        
+        // Create map centered on continental US
+        const map = new ol.Map({
+            target: 'map',
+            layers: [osmLayer, esriLayer, wmsLayer],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([-98.5795, 39.8283]), // Center of continental US
+                zoom: 5
+            })
+        });
+        
+        // Basemap switcher event listeners
+        document.querySelectorAll('input[name="basemap"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'osm') {
+                    osmLayer.setVisible(true);
+                    esriLayer.setVisible(false);
+                } else if (e.target.value === 'esri') {
+                    osmLayer.setVisible(false);
+                    esriLayer.setVisible(true);
+                }
+            });
+        });
+        
+        // WMS layer toggle
+        document.getElementById('wms').addEventListener('change', (e) => {
+            wmsLayer.setVisible(e.target.checked);
+        });
+    </script>
+</body>
 </html>
-
