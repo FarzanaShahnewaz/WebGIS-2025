@@ -1,94 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>OpenLayers Basemap Switcher with WMS</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css" />
-<style>
-body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-#map { width: 100%; height: 90vh; }
-#controls { padding: 10px; background: #f4f4f4; }
-.layer-option { margin-right: 20px; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenLayers Basemap Switcher with WMS</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css" />
+  <style>
+    body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    #map { width: 100%; height: 90vh; }
+    #controls { padding: 10px; background: #f4f4f4; }
+    .layer-option { margin-right: 20px; }
+  </style>
 </head>
 <body>
-<div id="controls">
-<strong>Basemaps:</strong>
-<label class="layer-option">
-<input type="radio" name="basemap" value="osm" checked /> OSM
-</label>
-<label class="layer-option">
-<input type="radio" name="basemap" value="esri" /> ESRI Imagery
-</label>
+  <div id="controls">
+    <strong>Basemaps:</strong>
+    <label class="layer-option">
+      <input type="radio" name="basemap" value="osm" checked /> OSM
+    </label>
+    <label class="layer-option">
+      <input type="radio" name="basemap" value="esri" /> ESRI Imagery
+    </label>
 
+    <label style="margin-left: 30px;">
+      <input type="checkbox" id="wmsToggle" checked /> WMS Layer (topp:states)
+    </label>
+  </div>
 
-<label style="margin-left: 30px;">
-<input type="checkbox" id="wmsToggle" checked /> WMS Layer (topp:states)
-</label>
-</div>
+  <div id="map"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/ol@latest/ol.js">    // Error handling for basemaps
+    osmLayer.getSource().on('tileloaderror', () => {
+      console.warn("Please verify the OSM and ESRI World Imagery as they disappear.");
+    });
 
-<div id="map"></div>
+    esriLayer.getSource().on('tileloaderror', () => {
+      console.warn("Please verify the OSM and ESRI World Imagery as they disappear.");
+    });
 
+    // Error handling for WMS layer
+    wmsLayer.getSource().on('tileloaderror', () => {
+      console.warn("Please verify the WMS as it does not show.");
+    });
+  </script>
+  <script>
+    // Base Layers
+    const osmLayer = new ol.layer.Tile({
+      source: new ol.source.OSM(),
+      visible: true
+    });
 
-<script src="https://cdn.jsdelivr.net/npm/ol@latest/ol.js"></script>
-<script>
-// Base Layers
-const osmLayer = new ol.layer.Tile({
-source: new ol.source.OSM(),
-visible: true
-});
+    const esriLayer = new ol.layer.Tile({
+      source: new ol.source.XYZ({
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+      }),
+      visible: false
+    });
 
+    // WMS Layer
+    const wmsLayer = new ol.layer.Tile({
+      source: new ol.source.TileWMS({
+        url: "https://ahocevar.com/geoserver/wms",
+        params: {
+          LAYERS: "topp:states",
+          VERSION: "1.1.1",
+          FORMAT: "image/png",
+          SRS: "EPSG:4326"
+        }
+      }),
+      visible: true
+    });
 
-const esriLayer = new ol.layer.Tile({
-source: new ol.source.XYZ({
-url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-}),
-visible: false
-});
+    // Map Initialization
+    const map = new ol.Map({
+      target: "map",
+      layers: [osmLayer, esriLayer, wmsLayer],
+      view: new ol.View({
+        center: ol.proj.fromLonLat([-98.5, 39.8]), // Continental US
+        zoom: 4
+      })
+    });
 
+    // Basemap Switcher
+    document.querySelectorAll('input[name="basemap"]').forEach(radio => {
+      radio.addEventListener("change", e => {
+        const selected = e.target.value;
+        osmLayer.setVisible(selected === "osm");
+        esriLayer.setVisible(selected === "esri");
+      });
+    });
 
-// WMS Layer
-const wmsLayer = new ol.layer.Tile({
-source: new ol.source.TileWMS({
-url: "https://ahocevar.com/geoserver/wms",
-params: {
-LAYERS: "topp:states",
-VERSION: "1.1.1",
-FORMAT: "image/png",
-SRS: "EPSG:4326"
-}
-}),
-visible: true
-});
-
-
-// Map Initialization
-const map = new ol.Map({
-target: "map",
-layers: [osmLayer, esriLayer, wmsLayer],
-view: new ol.View({
-center: ol.proj.fromLonLat([-98.5, 39.8]), // Continental US
-zoom: 4
-})
-});
-
-
-// Basemap Switcher
-document.querySelectorAll('input[name="basemap"]').forEach(radio => {
-radio.addEventListener("change", e => {
-const selected = e.target.value;
-osmLayer.setVisible(selected === "osm");
-esriLayer.setVisible(selected === "esri");
-});
-});
-
-
-// WMS Toggle
-document.getElementById("wmsToggle").addEventListener("change", e => {
-wmsLayer.setVisible(e.target.checked);
-});
-</script>
+    // WMS Toggle
+    document.getElementById("wmsToggle").addEventListener("change", e => {
+      wmsLayer.setVisible(e.target.checked);
+    });
+  </script>
 </body>
 </html>
+
